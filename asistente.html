@@ -1,0 +1,501 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0}</style>
+<title>Asistente de Chapas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Concepto: encabezado con franja de chapa acanalada, chat a la izquierda y presupuesto a la derecha, catálogo a ancho completo. Una columna en celular. */
+:root{
+  --bg:#EDF0F2;
+  --surface:#FFFFFF;
+  --surface-2:#E2E7EB;
+  --ink:#16212B;
+  --muted:#556574;
+  --line:#C9D1D8;
+  --accent:#B93F12;
+  --accent-ink:#FFFFFF;
+  --steel:#2F5D7C;
+  --steel-ink:#FFFFFF;
+  --ok:#23704A;
+  --warn:#8F5F06;
+  --bad:#B3261E;
+  --ridge-a:#D7DDE2;
+  --ridge-b:#A9B5BF;
+  --font-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --font-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11181E; --surface:#1A242C; --surface-2:#232F39; --ink:#E6ECF0; --muted:#93A4B1; --line:#34434F;
+    --accent:#F0793F; --accent-ink:#1B0E07; --steel:#7FB1D3; --steel-ink:#0E1A22;
+    --ok:#5CC38A; --warn:#E2B04A; --bad:#F28B82; --ridge-a:#2A3743; --ridge-b:#43566A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11181E; --surface:#1A242C; --surface-2:#232F39; --ink:#E6ECF0; --muted:#93A4B1; --line:#34434F;
+  --accent:#F0793F; --accent-ink:#1B0E07; --steel:#7FB1D3; --steel-ink:#0E1A22;
+  --ok:#5CC38A; --warn:#E2B04A; --bad:#F28B82; --ridge-a:#2A3743; --ridge-b:#43566A;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--font-body)}
+.ridge{height:12px;background:repeating-linear-gradient(90deg,var(--ridge-a) 0,var(--ridge-b) 7px,var(--ridge-a) 14px)}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+.top{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;margin-bottom:24px}
+@media (min-width:860px){.top{grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);align-items:end}}
+.eyebrow{margin:0 0 10px;font:500 12px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+h1{margin:0 0 12px;font:700 clamp(2.25rem,7vw,3.75rem)/.95 var(--font-display);text-transform:uppercase;letter-spacing:.01em;text-wrap:balance}
+.lede{margin:0;max-width:60ch;color:var(--muted);font-size:1.0625rem}
+.note{margin:0;padding:12px 14px;border:1px dashed var(--line);border-radius:4px;font-size:13px;color:var(--muted)}
+.note strong{color:var(--ink)}
+
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
+@media (min-width:960px){.grid{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}.full{grid-column:1/-1}}
+.panel{min-width:0;padding:18px;background:var(--surface);border:1px solid var(--line);border-radius:6px}
+.panel h2{margin:0 0 4px;font:600 1.375rem/1.1 var(--font-display);text-transform:uppercase;letter-spacing:.03em}
+.sub{margin:0 0 14px;color:var(--muted);font-size:13.5px}
+
+input,select,textarea{width:100%;min-width:0;padding:9px 10px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--steel);outline-offset:2px}
+label{font:500 11.5px/1.2 var(--font-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.btn{padding:9px 14px;font:600 14px/1.2 var(--font-body);color:var(--accent-ink);background:var(--accent);border:0;border-radius:4px;cursor:pointer}
+.btn:hover{filter:brightness(1.08)}
+
+.chat{display:flex;flex-direction:column}
+.log{flex:1;min-height:300px;max-height:540px;overflow-y:auto;display:flex;flex-direction:column;gap:14px;margin-bottom:12px;padding-right:2px}
+.msg{display:flex;flex-direction:column;gap:6px;max-width:94%}
+.msg.user{align-self:flex-end;align-items:flex-end}
+.msg.bot{align-self:flex-start}
+.bubble{padding:10px 13px;border-radius:10px;font-size:14.5px}
+.bubble p{margin:0}
+.bubble p+p{margin-top:6px}
+.user .bubble{background:var(--steel);color:var(--steel-ink);border-bottom-right-radius:3px}
+.bot .bubble{background:var(--surface-2);border-bottom-left-radius:3px}
+.tools{display:flex;flex-wrap:wrap;gap:6px}
+.tool{padding:4px 6px;font:400 11.5px/1 var(--font-mono);color:var(--muted);border:1px solid var(--line);border-radius:3px;overflow-wrap:anywhere}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.chip{padding:6px 11px;font:500 13px/1.25 var(--font-body);color:var(--ink);text-align:left;background:transparent;border:1px solid var(--line);border-radius:999px;cursor:pointer}
+.chip:hover{border-color:var(--steel)}
+.chip[aria-pressed="true"]{color:var(--bg);background:var(--ink);border-color:var(--ink)}
+.send{display:flex;gap:8px}
+.send input{flex:1;width:auto}
+
+.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field.wide{grid-column:1/-1}
+.alerts{display:grid;gap:8px;margin-bottom:12px}
+.alerts:empty{display:none}
+.alert{margin:0;padding:9px 12px;font-size:13.5px;border:1px solid var(--warn);border-radius:4px}
+.alert strong{color:var(--warn)}
+.alert.bad{border-color:var(--bad)}
+.alert.bad strong{color:var(--bad)}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.stat{padding:10px 12px;background:var(--surface-2);border-radius:4px}
+.stat b{display:block;margin-bottom:4px;font:600 1.75rem/1 var(--font-display);font-variant-numeric:tabular-nums}
+.stat span{font:400 11.5px/1.3 var(--font-mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{padding:8px 10px;font:500 11.5px/1.2 var(--font-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;white-space:nowrap;border-bottom:1px solid var(--line)}
+td{padding:9px 10px;vertical-align:top;border-bottom:1px solid var(--line)}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.muted{color:var(--muted);font-size:12.5px}
+tfoot td{border-bottom:0}
+.total td{padding-top:12px;font:600 1.375rem/1.1 var(--font-display);text-transform:uppercase;letter-spacing:.02em}
+.cmp{margin:8px 0 14px;font-size:13.5px;color:var(--muted)}
+.copy{display:grid;gap:8px}
+.copy textarea{font:400 12.5px/1.5 var(--font-mono);resize:vertical}
+.copyrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.copied{font-size:13px;color:var(--ok)}
+
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;font:500 12px/1 var(--font-body);white-space:nowrap;border:1px solid currentColor;border-radius:999px}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.ok{color:var(--ok)}
+.low{color:var(--warn)}
+.out{color:var(--bad)}
+.qty{margin-left:6px;font:400 12.5px/1 var(--font-mono);color:var(--muted)}
+.real td:first-child{width:38%}
+.real td{font-size:14px}
+@media (prefers-reduced-motion:no-preference){.chip,.btn{transition:filter .15s,border-color .15s}}
+</style>
+
+<div class="ridge" aria-hidden="true"></div>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow">Demo para el equipo de ventas</p>
+      <h1>Asistente de Chapas</h1>
+      <p class="lede">La vendedora escribe lo que pide el cliente. El asistente busca la chapa en el catálogo, calcula cuántas hacen falta, revisa el stock y deja el presupuesto armado.</p>
+    </div>
+    <p class="note"><strong>Datos de ejemplo.</strong> Precios, stock y medidas son inventados para la demo. El chat de esta página entiende frases simples con reglas. En la versión real lo hace Claude, leyendo la planilla o el sistema de la empresa.</p>
+  </header>
+
+  <main class="grid">
+    <section class="panel chat" aria-labelledby="h-chat">
+      <h2 id="h-chat">Asistente</h2>
+      <p class="sub">Escribí como si hablaras con un compañero. Abajo de cada respuesta ves qué consultó.</p>
+      <div class="log" id="log" role="log" aria-live="polite" aria-label="Conversación"></div>
+      <div class="chips" id="suggest" aria-label="Preguntas de ejemplo"></div>
+      <form class="send" id="sendform" autocomplete="off">
+        <input id="msg" type="text" aria-label="Mensaje para el asistente" placeholder="Ej: 8 x 5 m con trapezoidal C24, pendiente 20%">
+        <button class="btn" type="submit">Enviar</button>
+      </form>
+    </section>
+
+    <section class="panel" aria-labelledby="h-quote">
+      <h2 id="h-quote">Presupuesto borrador</h2>
+      <p class="sub">Se completa solo desde el chat. También se puede ajustar a mano.</p>
+      <form class="form" id="qform" autocomplete="off">
+        <div class="field wide"><label for="f-prod">Chapa</label><select id="f-prod"></select></div>
+        <div class="field"><label for="f-ancho">Ancho del techo (m)</label><input id="f-ancho" type="number" min="0.5" step="0.1" value="6"></div>
+        <div class="field"><label for="f-run">Caída en planta (m)</label><input id="f-run" type="number" min="0.5" step="0.1" value="4"></div>
+        <div class="field"><label for="f-pend">Pendiente (%)</label><input id="f-pend" type="number" min="0" max="100" step="1" value="15"></div>
+        <div class="field"><label for="f-vol">Voladizo (m)</label><input id="f-vol" type="number" min="0" step="0.05" value="0.2"></div>
+        <div class="field"><label for="f-aguas">Aguas</label>
+          <select id="f-aguas"><option value="1">1 agua</option><option value="2">2 aguas</option></select></div>
+        <div class="field"><label for="f-modo">Cómo se vende</label>
+          <select id="f-modo"><option value="std">Largo estándar (unidad)</option><option value="cut">Corte a medida (metro)</option></select></div>
+      </form>
+
+      <div class="alerts" id="alerts" role="status"></div>
+      <div class="stats">
+        <div class="stat"><b id="s-area">-</b><span>m² de cubierta</span></div>
+        <div class="stat"><b id="s-piezas">-</b><span>chapas</span></div>
+        <div class="stat"><b id="s-largo">-</b><span>m cada una</span></div>
+      </div>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Detalle</th><th class="num">Cant.</th><th class="num">P. unitario</th><th class="num">Subtotal</th></tr></thead>
+          <tbody id="qbody"></tbody>
+          <tfoot><tr class="total"><td colspan="3">Total sin IVA</td><td class="num" id="qtotal">-</td></tr></tfoot>
+        </table>
+      </div>
+      <p class="cmp" id="cmp"></p>
+      <div class="copy">
+        <label for="qtext">Texto para pasar al cliente</label>
+        <textarea id="qtext" readonly rows="7"></textarea>
+        <div class="copyrow">
+          <button class="btn" type="button" id="copy">Copiar texto</button>
+          <span class="copied" id="copied" role="status"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel full" aria-labelledby="h-cat">
+      <h2 id="h-cat">Catálogo y stock</h2>
+      <p class="sub">Las chapas se venden por unidad en largos estándar o cortadas a medida por metro lineal.</p>
+      <div class="chips" id="filters" role="group" aria-label="Filtrar por tipo"></div>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Producto</th><th>Medida</th><th class="num">Por metro</th><th class="num">Por unidad</th><th>Stock</th></tr></thead>
+          <tbody id="cbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel full" aria-labelledby="h-real">
+      <h2 id="h-real">De la demo a la versión real</h2>
+      <p class="sub">Lo que se ve acá funciona igual, con otras piezas por detrás.</p>
+      <div class="tw">
+        <table class="real">
+          <thead><tr><th>En esta demo</th><th>En la versión real</th></tr></thead>
+          <tbody>
+            <tr><td>Tabla de ejemplo dentro de la página</td><td>La planilla de precios o el sistema de gestión de la empresa, leído en el momento de la consulta</td></tr>
+            <tr><td>El chat entiende frases simples con reglas</td><td>Claude entiende cualquier forma de pedir y llama a las mismas funciones: buscar producto, calcular cubierta, consultar stock</td></tr>
+            <tr><td>El presupuesto queda en pantalla</td><td>Queda guardado y sale por WhatsApp o PDF</td></tr>
+            <tr><td>Si no entiende, pide que lo reformules</td><td>Si no sabe, avisa y pasa la consulta a una persona</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- utilidades ---------- */
+var $ = function(id){ return document.getElementById(id); };
+function nf(n,min,max){
+  return n.toLocaleString('en-US',{minimumFractionDigits:min,maximumFractionDigits:max})
+    .replace(/,/g,'§').replace(/\./g,',').replace(/§/g,'.');
+}
+function money(n){ return '$ ' + nf(Math.round(n),0,0); }
+function len(n){ return nf(n,2,2); }
+function dec(n){ return nf(n,0,2); }
+function mk(tag,cls,text){ var e=document.createElement(tag); if(cls) e.className=cls; if(text!==undefined) e.textContent=text; return e; }
+
+/* ---------- datos de ejemplo ---------- */
+var STD=[2,2.5,3,3.5,4,4.5,5,5.5,6,7,8,9,10,12];
+var SOLAPE=0.2, TORN_POR_M2=7, STOCK_BAJO=400;
+
+function chapa(id,tipo,acabado,color,cal,esp,util,pm,stock,maxL){
+  var nombre = tipo + (tipo==='Trapezoidal' ? ' T101' : '') + ' ' + acabado.toLowerCase() + (color ? ' ' + color : '') + ' ' + cal;
+  return {id:id,tipo:tipo,acabado:acabado,color:color,calibre:cal,esp:esp,util:util,pm:pm,stock:stock,maxL:maxL,nombre:nombre,
+          largos:STD.filter(function(l){return l<=maxL;})};
+}
+var CHAPAS=[
+  chapa('AC-C27','Acanalada','Galvanizada','','C27',0.40,1.00, 8900,2400,12),
+  chapa('AC-C25','Acanalada','Galvanizada','','C25',0.50,1.00,10800,3100,12),
+  chapa('AC-C24','Acanalada','Galvanizada','','C24',0.56,1.00,12400,1650,12),
+  chapa('SI-C27','Sinusoidal','Galvanizada','','C27',0.40,1.00, 9200,   0,10),
+  chapa('SI-C25','Sinusoidal','Galvanizada','','C25',0.50,1.00,11100, 980,10),
+  chapa('TR-C25','Trapezoidal','Galvanizada','','C25',0.50,1.01,12600,4200,12),
+  chapa('TR-C24','Trapezoidal','Galvanizada','','C24',0.56,1.01,14300,2250,12),
+  chapa('TR-C22','Trapezoidal','Galvanizada','','C22',0.71,1.01,17900, 260,12),
+  chapa('TP-C25G','Trapezoidal','Prepintada','gris','C25',0.50,1.01,15800,1900,12),
+  chapa('TP-C25R','Trapezoidal','Prepintada','rojo','C25',0.50,1.01,15800, 640,12),
+  chapa('TP-C25A','Trapezoidal','Prepintada','azul','C25',0.50,1.01,16100, 310,12)
+];
+var TOR={id:'TOR',nombre:'Tornillo autoperforante con arandela',medida:'14 x 2″, caja x100',unidad:'caja',pu:14500,stock:85};
+var CUM={id:'CUM',nombre:'Cumbrera galvanizada C25',medida:'Desarrollo 0,50 m',unidad:'metro',pm:6200,stock:300};
+var CIN={id:'CIN',nombre:'Cinta selladora butílica',medida:'Rollo de 10 m',unidad:'rollo',pu:5800,stock:40};
+var BY={}; CHAPAS.forEach(function(p){ BY[p.id]=p; });
+
+/* ---------- cálculo de cubierta ---------- */
+function compute(o){
+  var p=BY[o.pid];
+  var caida=o.run*Math.sqrt(1+Math.pow(o.pend/100,2));
+  var slope=caida+o.vol;
+  var area=o.ancho*slope*o.aguas;
+  var across=Math.ceil(o.ancho/p.util-1e-9);
+  var n=1, seg=slope;
+  if(slope>p.maxL+1e-9){
+    n=Math.ceil((slope-SOLAPE)/(p.maxL-SOLAPE)-1e-9);
+    seg=(slope+(n-1)*SOLAPE)/n;
+  }
+  var std=p.maxL;
+  for(var i=0;i<p.largos.length;i++){ if(p.largos[i]>=seg-1e-9){ std=p.largos[i]; break; } }
+  var cut=Math.ceil(seg*20-1e-9)/20;
+  var piezas=across*n*o.aguas;
+  var cajas=Math.ceil(area*TORN_POR_M2/100-1e-9);
+  var cumb=o.aguas===2 ? Math.ceil(o.ancho-1e-9) : 0;
+  var extras=cajas*TOR.pu+cumb*CUM.pm;
+  var totalStd=piezas*std*p.pm+extras;
+  var totalCut=piezas*cut*p.pm+extras;
+  var largo=o.modo==='cut' ? cut : std;
+  return {p:p,slope:slope,area:area,across:across,n:n,seg:seg,std:std,cut:cut,piezas:piezas,largo:largo,
+          metros:piezas*largo,cajas:cajas,cumb:cumb,totalStd:totalStd,totalCut:totalCut,
+          total:o.modo==='cut' ? totalCut : totalStd,modo:o.modo,o:o};
+}
+
+/* ---------- panel de presupuesto ---------- */
+var lastText='';
+function readForm(){
+  return {pid:$('f-prod').value, ancho:parseFloat($('f-ancho').value), run:parseFloat($('f-run').value),
+          pend:parseFloat($('f-pend').value)||0, vol:parseFloat($('f-vol').value)||0,
+          aguas:parseInt($('f-aguas').value,10), modo:$('f-modo').value};
+}
+function setForm(o){
+  $('f-prod').value=o.pid; $('f-ancho').value=o.ancho; $('f-run').value=o.run;
+  $('f-pend').value=o.pend; $('f-vol').value=o.vol; $('f-aguas').value=String(o.aguas); $('f-modo').value=o.modo;
+}
+function addAlert(box,strong,text,bad){
+  var a=mk('p','alert'+(bad?' bad':'')); var s=mk('strong',null,strong+' '); a.appendChild(s); a.appendChild(document.createTextNode(text)); box.appendChild(a);
+}
+function clearQuote(msg){
+  $('s-area').textContent='-'; $('s-piezas').textContent='-'; $('s-largo').textContent='-';
+  $('qbody').innerHTML=''; $('qtotal').textContent='-'; $('cmp').textContent=msg||''; $('qtext').value=''; lastText='';
+}
+function renderQuote(){
+  var o=readForm(), box=$('alerts'); box.innerHTML='';
+  if(!(o.ancho>0) || !(o.run>0)){ clearQuote('Ingresá un ancho y una caída mayores a 0.'); return null; }
+  var r=compute(o), p=r.p, lines=[];
+  $('s-area').textContent=dec(r.area);
+  $('s-piezas').textContent=String(r.piezas);
+  $('s-largo').textContent=len(r.largo);
+
+  lines.push({d: o.modo==='cut' ? p.nombre+', corte a medida '+len(r.cut)+' m' : p.nombre+', largo '+len(r.std)+' m',
+              q:r.piezas+' u.', pu:p.pm*r.largo, s:p.pm*r.largo*r.piezas});
+  lines.push({d:TOR.nombre+' ('+TOR.medida+')', q:r.cajas+' caja'+(r.cajas>1?'s':''), pu:TOR.pu, s:TOR.pu*r.cajas});
+  if(r.cumb) lines.push({d:CUM.nombre, q:r.cumb+' m', pu:CUM.pm, s:CUM.pm*r.cumb});
+
+  $('qbody').innerHTML=lines.map(function(l){
+    return '<tr><td>'+l.d+'</td><td class="num">'+l.q+'</td><td class="num">'+money(l.pu)+'</td><td class="num">'+money(l.s)+'</td></tr>';
+  }).join('');
+  $('qtotal').textContent=money(r.total);
+  $('cmp').textContent='Largo estándar: '+money(r.totalStd)+'. Corte a medida: '+money(r.totalCut)+'.'+
+    (r.totalStd>r.totalCut ? ' Cortando a medida se ahorran '+money(r.totalStd-r.totalCut)+' si la empresa ofrece el corte.' : '');
+
+  if(p.stock<=0) addAlert(box,'Sin stock.',p.nombre+' no tiene stock. Elegí otra chapa.',true);
+  else if(r.metros>p.stock) addAlert(box,'Stock insuficiente.','Hay '+nf(p.stock,0,0)+' m de '+p.nombre+' y hacen falta '+dec(r.metros)+' m.',true);
+  else if(p.stock<STOCK_BAJO) addAlert(box,'Stock bajo.','Quedan '+nf(p.stock,0,0)+' m de '+p.nombre+'.');
+  if(r.n>1) addAlert(box,'Caída larga.','Supera el largo máximo de '+p.maxL+' m. Cada faja va en '+r.n+' chapas con solape de '+len(SOLAPE)+' m.');
+
+  var txt=['PRESUPUESTO BORRADOR (demo)',
+    'Cubierta de '+dec(o.ancho)+' x '+dec(o.run)+' m, '+o.aguas+(o.aguas>1?' aguas':' agua')+', pendiente '+dec(o.pend)+' %'].concat(
+    lines.map(function(l){ return '- '+l.d+': '+l.q+' x '+money(l.pu)+' = '+money(l.s); }),
+    ['Total sin IVA: '+money(r.total),'Precios y stock de ejemplo.']);
+  lastText=txt.join('\n'); $('qtext').value=lastText;
+  return r;
+}
+
+/* ---------- catálogo ---------- */
+var FILTERS=['Todos','Acanalada','Sinusoidal','Trapezoidal','Accesorios'], cur='Todos';
+function stockPill(stock,low,unit){
+  var cls=stock<=0?'out':(stock<low?'low':'ok'), txt=stock<=0?'Sin stock':(stock<low?'Stock bajo':'En stock');
+  return '<span class="pill '+cls+'">'+txt+'</span><span class="qty">'+nf(stock,0,0)+' '+unit+'</span>';
+}
+function renderFilters(){
+  var c=$('filters'); c.innerHTML='';
+  FILTERS.forEach(function(f){
+    var b=mk('button','chip',f); b.type='button'; b.setAttribute('aria-pressed',f===cur?'true':'false');
+    b.addEventListener('click',function(){ cur=f; renderFilters(); renderCatalog(); });
+    c.appendChild(b);
+  });
+}
+function renderCatalog(){
+  var rows=[];
+  if(cur!=='Accesorios'){
+    CHAPAS.filter(function(p){ return cur==='Todos'||p.tipo===cur; }).forEach(function(p){
+      rows.push('<tr><td><strong>'+p.nombre+'</strong></td>'+
+        '<td>'+p.calibre+' · '+nf(p.esp,2,2)+' mm · útil '+nf(p.util,2,2)+' m<br><span class="muted">Largos de 2 a '+p.maxL+' m</span></td>'+
+        '<td class="num">'+money(p.pm)+'</td><td class="num">4 m: '+money(p.pm*4)+'</td>'+
+        '<td>'+stockPill(p.stock,STOCK_BAJO,'m')+'</td></tr>');
+    });
+  }
+  if(cur==='Todos'||cur==='Accesorios'){
+    rows.push('<tr><td><strong>'+TOR.nombre+'</strong></td><td>'+TOR.medida+'</td><td class="num">-</td><td class="num">'+money(TOR.pu)+' / caja</td><td>'+stockPill(TOR.stock,50,'cajas')+'</td></tr>');
+    rows.push('<tr><td><strong>'+CUM.nombre+'</strong></td><td>'+CUM.medida+'</td><td class="num">'+money(CUM.pm)+'</td><td class="num">-</td><td>'+stockPill(CUM.stock,50,'m')+'</td></tr>');
+    rows.push('<tr><td><strong>'+CIN.nombre+'</strong></td><td>'+CIN.medida+'</td><td class="num">-</td><td class="num">'+money(CIN.pu)+' / rollo</td><td>'+stockPill(CIN.stock,50,'rollos')+'</td></tr>');
+  }
+  $('cbody').innerHTML=rows.join('');
+}
+
+/* ---------- asistente (reglas simples que imitan las funciones de la versión real) ---------- */
+function parse(text){
+  var t=text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/(\d),(\d)/g,'$1.$2');
+  var dims=t.match(/(\d+(?:\.\d+)?)\s*(?:x|por|\*|×)\s*(\d+(?:\.\d+)?)/);
+  var pend=t.match(/pendiente\s*(?:de\s*)?(\d+(?:\.\d+)?)/)||t.match(/(\d+(?:\.\d+)?)\s*%/);
+  var vol=t.match(/voladizo\s*(?:de\s*)?(\d+(?:\.\d+)?)/);
+  var cal=t.match(/\bc\s?-?(\d{2})\b/);
+  var tipo=null;
+  if(/acanalad/.test(t)) tipo='Acanalada'; else if(/sinusoid/.test(t)) tipo='Sinusoidal'; else if(/trapez|\bt\s?-?101\b/.test(t)) tipo='Trapezoidal';
+  var color=(t.match(/\b(gris|rojo|azul)\b/)||[])[1]||'';
+  return {t:t, dims:dims?[parseFloat(dims[1]),parseFloat(dims[2])]:null,
+          pend:pend?parseFloat(pend[1]):null, vol:vol?parseFloat(vol[1]):null,
+          cal:cal?'C'+cal[1]:null, tipo:tipo, color:color,
+          prepintada:/prepintad|pintad|color/.test(t)||!!color,
+          aguas:/(dos|2)\s+aguas/.test(t)?2:null,
+          acc:/tornillo/.test(t)?TOR:(/cumbrera/.test(t)?CUM:(/cinta/.test(t)?CIN:null))};
+}
+function findProducts(q){
+  return CHAPAS.filter(function(p){
+    return (!q.tipo||p.tipo===q.tipo) && (!q.cal||p.calibre===q.cal) && (!q.color||p.color===q.color) &&
+           (!q.prepintada||p.acabado==='Prepintada');
+  });
+}
+function stockText(p){ return p.stock<=0?'sin stock':(p.stock<STOCK_BAJO?'stock bajo ('+nf(p.stock,0,0)+' m)':'stock '+nf(p.stock,0,0)+' m'); }
+function queryLabel(q){ return [q.tipo,q.prepintada?'prepintada':'',q.color,q.cal].filter(Boolean).join(' '); }
+
+function lookupReply(q){
+  if(q.acc){
+    var a=q.acc, price=a.pm?money(a.pm)+' por metro':money(a.pu)+' por '+a.unidad;
+    return {lines:[a.nombre+' ('+a.medida+'): '+price+', hay '+nf(a.stock,0,0)+' '+(a.unidad==='metro'?'m':a.unidad+'s')+'.'],
+            tools:['buscar_producto("'+a.id+'")']};
+  }
+  if(!q.tipo&&!q.cal&&!q.color&&!q.prepintada){
+    return {lines:['¿De qué chapa? Tengo acanalada, sinusoidal y trapezoidal, en galvanizada o prepintada.'],tools:[]};
+  }
+  var list=findProducts(q), tools=['buscar_producto("'+queryLabel(q)+'")'];
+  if(!list.length) return {lines:['No tengo '+queryLabel(q)+' en el catálogo. Probá con otra combinación de tipo y calibre.'],tools:tools};
+  var shown=list.slice(0,6);
+  var lines=shown.map(function(p){
+    return p.nombre+': '+money(p.pm)+' por metro, chapa de 4 m '+money(p.pm*4)+', '+stockText(p)+'.';
+  });
+  if(list.length>6) lines.push('Hay '+(list.length-6)+' más. Decime el calibre y lo afino.');
+  if(list.length===1) lines.push('Ancho útil '+len(list[0].util)+' m, largos de 2 a '+list[0].maxL+' m.');
+  tools.push('consultar_stock('+shown.map(function(p){return '"'+p.id+'"';}).join(', ')+')');
+  return {lines:lines,tools:tools};
+}
+
+function quoteReply(q){
+  var qq={tipo:q.tipo,cal:q.cal,color:q.color,prepintada:q.prepintada};
+  var asumi=[];
+  if(!qq.tipo){ qq.tipo=q.prepintada?'Trapezoidal':'Acanalada'; asumi.push(qq.tipo.toLowerCase()); }
+  var list=findProducts(qq);
+  if(!list.length) return {lines:['No tengo '+queryLabel(qq)+' en el catálogo. Probá con acanalada, sinusoidal o trapezoidal, y calibre C22 a C27.'],tools:['buscar_producto("'+queryLabel(qq)+'")']};
+  if(!q.prepintada){ var g=list.filter(function(p){return p.acabado==='Galvanizada';}); if(g.length) list=g; }
+  var p=q.cal?list[0]:(list.filter(function(c){return c.calibre==='C25';})[0]||list[0]);
+  if(!q.cal) asumi.push('calibre '+p.calibre);
+  var o={pid:p.id, ancho:q.dims[0], run:q.dims[1],
+         pend:q.pend!==null?q.pend:15, vol:q.vol!==null?q.vol:0.2, aguas:q.aguas||1, modo:'std'};
+  if(q.pend===null) asumi.push('pendiente 15 %');
+  if(q.vol===null) asumi.push('voladizo 0,20 m');
+  if(!q.aguas) asumi.push('1 agua');
+  asumi.push(dec(o.ancho)+' m de ancho y '+dec(o.run)+' m de caída');
+  setForm(o);
+  var r=renderQuote();
+  var lines=['Para '+dec(o.ancho)+' × '+dec(o.run)+' m con '+p.nombre+' necesitás '+r.piezas+' chapas de '+len(r.largo)+' m.',
+    'Cubierta de '+dec(r.area)+' m². Cada chapa cubre '+len(p.util)+' m de ancho útil. Sumé '+r.cajas+' caja'+(r.cajas>1?'s':'')+' de tornillos'+(r.cumb?' y '+r.cumb+' m de cumbrera':'')+'.',
+    'Total estimado: '+money(r.total)+' sin IVA.'+(r.totalStd>r.totalCut?' Cortando cada chapa a '+len(r.cut)+' m baja a '+money(r.totalCut)+'.':'')];
+  if(p.stock<=0 || r.metros>p.stock){
+    var alt=CHAPAS.filter(function(c){return c.tipo===p.tipo&&c.id!==p.id&&c.stock>=r.metros;})
+      .sort(function(a,b){return Math.abs(a.pm-p.pm)-Math.abs(b.pm-p.pm);})[0];
+    lines.push((p.stock<=0?'Ojo: '+p.nombre+' está sin stock.':'Ojo: hay '+nf(p.stock,0,0)+' m en stock y hacen falta '+dec(r.metros)+' m.')+
+      (alt?' Una alternativa es '+alt.nombre+' a '+money(alt.pm)+' por metro, con stock '+nf(alt.stock,0,0)+' m.':''));
+  }
+  lines.push('Cargué el presupuesto a la derecha. Tomé '+asumi.join(', ')+'. Si algo cambia, ajustalo ahí o escribímelo.');
+  return {lines:lines,tools:['buscar_producto("'+queryLabel({tipo:p.tipo,cal:p.calibre,color:p.color,prepintada:p.acabado==='Prepintada'})+'")',
+    'calcular_cubierta('+dec(o.ancho)+', '+dec(o.run)+', pendiente='+dec(o.pend)+'%)','consultar_stock("'+p.id+'")']};
+}
+
+function answer(text){
+  var q=parse(text);
+  if(q.dims) return quoteReply(q);
+  if(q.acc||q.tipo||q.cal||q.color||/precio|cuanto (sale|cuesta|esta)|stock|disponib|tenemos|hay /.test(q.t)) return lookupReply(q);
+  if(/^(hola|buen)/.test(q.t)) return {lines:['Hola. Pasame lo que pide el cliente, por ejemplo las medidas del techo y el tipo de chapa, y te armo el cálculo.'],tools:[]};
+  return {lines:['No encontré medidas ni un producto en ese mensaje. Probá con "6 x 4 m con acanalada C25" o "precio trapezoidal prepintada".'],tools:[]};
+}
+
+/* ---------- chat ---------- */
+var log=$('log');
+function addMsg(role,lines,tools){
+  var w=mk('div','msg '+role), b=mk('div','bubble');
+  lines.forEach(function(l){ b.appendChild(mk('p',null,l)); });
+  w.appendChild(b);
+  if(tools&&tools.length){ var t=mk('div','tools'); tools.forEach(function(x){ t.appendChild(mk('span','tool',x)); }); w.appendChild(t); }
+  log.appendChild(w); log.scrollTop=log.scrollHeight;
+}
+function send(text){
+  text=text.trim(); if(!text) return;
+  addMsg('user',[text]);
+  var a=answer(text); addMsg('bot',a.lines,a.tools);
+}
+
+/* ---------- arranque ---------- */
+(function init(){
+  var groups={};
+  CHAPAS.forEach(function(p){ var g=p.tipo+' '+p.acabado.toLowerCase(); (groups[g]=groups[g]||[]).push(p); });
+  var sel=$('f-prod');
+  Object.keys(groups).forEach(function(g){
+    var og=document.createElement('optgroup'); og.label=g;
+    groups[g].forEach(function(p){ var op=document.createElement('option'); op.value=p.id; op.textContent=p.nombre+' · '+money(p.pm)+' / m'; og.appendChild(op); });
+    sel.appendChild(og);
+  });
+  setForm({pid:'AC-C25',ancho:6,run:4,pend:15,vol:0.2,aguas:1,modo:'std'});
+  renderQuote(); renderFilters(); renderCatalog();
+
+  ['6 x 4 m con acanalada C25','Precio trapezoidal prepintada','Stock sinusoidal C27','Techo a dos aguas 8 x 5 m trapezoidal C24, pendiente 20%']
+    .forEach(function(s){ var b=mk('button','chip',s); b.type='button'; b.addEventListener('click',function(){ send(s); }); $('suggest').appendChild(b); });
+
+  $('sendform').addEventListener('submit',function(e){ e.preventDefault(); var i=$('msg'); send(i.value); i.value=''; });
+  $('qform').addEventListener('input',renderQuote);
+  $('qform').addEventListener('change',renderQuote);
+  $('copy').addEventListener('click',function(){
+    var done=function(m){ $('copied').textContent=m; setTimeout(function(){ $('copied').textContent=''; },2500); };
+    var fallback=function(){ var t=$('qtext'); t.focus(); t.select(); done('Texto seleccionado, copialo con Ctrl+C'); };
+    try{ navigator.clipboard.writeText(lastText).then(function(){ done('Copiado'); },fallback); }catch(err){ fallback(); }
+  });
+
+  send('Cliente quiere techar 6 x 4 m con acanalada C25, pendiente 15%');
+})();
+})();
+</script>
+
+</body></html>
